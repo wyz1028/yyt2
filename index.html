@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+  <title>最近营业厅查询</title>
+  <style>
+    body {
+      font-family: "PingFang SC", "微软雅黑", Arial, sans-serif;
+      background: #f6f8fa;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 24px 12px 40px 12px;
+    }
+    h2 {
+      text-align: center;
+      color: #222;
+      margin-bottom: 18px;
+      font-size: 1.5em;
+      letter-spacing: 1px;
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      background: linear-gradient(90deg, #4f8cff 0%, #1ec8e1 100%);
+      color: #fff;
+      border: none;
+      border-radius: 24px;
+      font-size: 1.1em;
+      padding: 14px 0;
+      margin: 0 auto 18px auto;
+      box-shadow: 0 2px 8px rgba(79,140,255,0.12);
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn:active {
+      background: linear-gradient(90deg, #1ec8e1 0%, #4f8cff 100%);
+    }
+    .result {
+      margin-top: 10px;
+      font-size: 1.1em;
+      min-height: 60px;
+      text-align: center;
+      color: #555;
+    }
+    .stores-list {
+      margin-top: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .store-card {
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      padding: 16px 18px 12px 18px;
+      transition: box-shadow 0.2s, border 0.2s;
+      border: 2px solid transparent;
+      position: relative;
+    }
+    .store-card.nearest {
+      border: 2px solid #4f8cff;
+      box-shadow: 0 4px 16px rgba(79,140,255,0.13);
+    }
+    .store-name {
+      font-weight: bold;
+      font-size: 1.15em;
+      color: #222;
+      margin-bottom: 6px;
+    }
+    .store-address {
+      font-size: 0.98em;
+      color: #666;
+      margin-bottom: 8px;
+    }
+    .store-distance {
+      font-size: 1em;
+      color: #1ec8e1;
+      font-weight: bold;
+    }
+    .nearest-badge {
+      position: absolute;
+      top: 10px;
+      right: 16px;
+      background: #4f8cff;
+      color: #fff;
+      font-size: 0.85em;
+      padding: 2px 10px;
+      border-radius: 12px;
+      letter-spacing: 1px;
+    }
+    .loading {
+      display: inline-block;
+      width: 28px;
+      height: 28px;
+      border: 3px solid #4f8cff;
+      border-radius: 50%;
+      border-top: 3px solid #fff;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 8px auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg);}
+      100% { transform: rotate(360deg);}
+    }
+    @media (max-width: 480px) {
+      .container { padding: 16px 2vw 32px 2vw; }
+      .store-card { padding: 12px 8px 10px 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>查找离我最近的营业厅</h2>
+    <button class="btn" onclick="getLocation()">获取当前位置并计算</button>
+    <div class="result" id="result"></div>
+    <div class="stores-list" id="storesList"></div>
+  </div>
+  <script>
+    // 营业厅信息
+    const stores = [
+      {
+        name: "晟辉通讯",
+        address: "淄川区昆仑镇磁村村(磁村卫生院西300米泉王路北)",
+        lat: 36.573964,
+        lng: 117.944964
+      },
+      {
+        name: "顺达通讯",
+        address: "淄川区龙泉镇韩盛村委对面顺达营业厅（湖南路98号）",
+        lat: 36.586964,
+        lng: 117.993964
+      },
+      {
+        name: "昊澄通讯",
+        address: "淄川区淄城东路47号102商铺",
+        lat: 36.634964,
+        lng: 118.003964
+      }
+    ];
+
+    // 计算两点间距离（Haversine公式，单位：米）
+    function getDistance(lat1, lng1, lat2, lng2) {
+      const toRad = d => d * Math.PI / 180;
+      const R = 6371000; // 地球半径，单位米
+      const dLat = toRad(lat2 - lat1);
+      const dLng = toRad(lng2 - lng1);
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                Math.sin(dLng/2) * Math.sin(dLng/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    }
+
+    function getLocation() {
+      const resultDiv = document.getElementById('result');
+      const storesListDiv = document.getElementById('storesList');
+      resultDiv.innerHTML = '<div class="loading"></div>正在获取您的位置...';
+      storesListDiv.innerHTML = '';
+      if (!navigator.geolocation) {
+        resultDiv.innerHTML = "当前浏览器不支持定位功能。";
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(success, error, { enableHighAccuracy: true });
+    }
+
+    function success(position) {
+      const userLat = position.coords.latitude;
+      const userLng = position.coords.longitude;
+
+      // 计算距离
+      const storesWithDist = stores.map(store => ({
+        ...store,
+        dist: getDistance(userLat, userLng, store.lat, store.lng)
+      }));
+
+      // 找到最近的
+      const nearest = storesWithDist.reduce((min, curr) => curr.dist < min.dist ? curr : min, storesWithDist[0]);
+
+      // 显示当前位置
+      document.getElementById('result').innerHTML =
+        `您当前位置：<br>纬度：${userLat.toFixed(6)}，经度：${userLng.toFixed(6)}`;
+
+      // 显示所有营业厅距离
+      const storesListDiv = document.getElementById('storesList');
+      storesListDiv.innerHTML = storesWithDist.map(store => `
+        <div class="store-card${store.name === nearest.name ? ' nearest' : ''}">
+          <div class="store-name">${store.name}</div>
+          <div class="store-address">${store.address}</div>
+          <div class="store-distance">距离您约 ${(store.dist/1000).toFixed(2)} 公里</div>
+          ${store.name === nearest.name ? '<div class="nearest-badge">最近</div>' : ''}
+        </div>
+      `).join('');
+    }
+
+    function error(err) {
+      let msg = "无法获取您的位置";
+      if (err.code === 1) msg += "：用户拒绝了定位请求。";
+      else if (err.code === 2) msg += "：位置信息不可用。";
+      else if (err.code === 3) msg += "：获取位置超时。";
+      else msg += "：" + err.message;
+      document.getElementById('result').innerHTML = msg;
+      document.getElementById('storesList').innerHTML = '';
+    }
+  </script>
+</body>
+</html>
