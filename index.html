@@ -113,11 +113,47 @@
       font-size: 0.9em;
       padding: 6px 12px;
       margin-top: 4px;
+      margin-right: 8px;
       cursor: pointer;
       transition: background 0.2s;
     }
     .nav-btn:active {
       background: #3a6fd5;
+    }
+    .map-options {
+      display: none;
+      margin-top: 8px;
+      background: #f0f4f8;
+      border-radius: 10px;
+      padding: 8px;
+    }
+    .map-option-btn {
+      display: inline-block;
+      background: #fff;
+      color: #333;
+      border: 1px solid #ddd;
+      border-radius: 14px;
+      font-size: 0.85em;
+      padding: 4px 10px;
+      margin: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .map-option-btn:active {
+      background: #f0f0f0;
+      transform: scale(0.98);
+    }
+    .map-option-btn.baidu {
+      color: #2932e1;
+      border-color: #2932e1;
+    }
+    .map-option-btn.gaode {
+      color: #0080ff;
+      border-color: #0080ff;
+    }
+    .map-option-btn.google {
+      color: #34a853;
+      border-color: #34a853;
     }
     @keyframes spin {
       0% { transform: rotate(0deg);}
@@ -208,7 +244,12 @@
           <div class="store-name">${store.name}</div>
           <div class="store-address">${store.address}</div>
           <div class="store-distance">距离您约 ${(store.dist/1000).toFixed(2)} 公里</div>
-          <button class="nav-btn" onclick="navigateTo(${store.lat}, ${store.lng})">导航到此处</button>
+          <button class="nav-btn" onclick="showMapOptions(${store.lat}, ${store.lng}, '${store.name}', '${store.address}')">导航到此处</button>
+          <div class="map-options" id="mapOptions-${store.lat}-${store.lng}">
+            <button class="map-option-btn baidu" onclick="navigateWithBaidu(${store.lat}, ${store.lng}, '${store.name}', '${store.address}')">百度地图</button>
+            <button class="map-option-btn gaode" onclick="navigateWithGaode(${store.lat}, ${store.lng}, '${store.name}', '${store.address}')">高德地图</button>
+            <button class="map-option-btn google" onclick="navigateWithGoogle(${store.lat}, ${store.lng}, '${store.name}', '${store.address}')">谷歌地图</button>
+          </div>
           ${store.name === nearest.name ? '<div class="nearest-badge">最近</div>' : ''}
         </div>
       `).join('');
@@ -224,29 +265,58 @@
       document.getElementById('storesList').innerHTML = '';
     }
 
-    // 导航功能
-    function navigateTo(lat, lng) {
-      // 检查是否在移动设备上
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    // 显示地图选择选项
+    function showMapOptions(lat, lng, name, address) {
+      const mapOptionsId = `mapOptions-${lat}-${lng}`;
+      const allMapOptions = document.querySelectorAll('.map-options');
       
-      if (isMobile) {
-        // 移动设备 - 使用设备默认地图应用
-        if (/*@cc_on!@*/false || !!document.documentMode) {
-          // IE浏览器
-          window.open(`https://www.bing.com/maps?rtp=~pos.${lat}_${lng}`);
-        } else if (navigator.userAgent.indexOf("Firefox") !== -1) {
-          // Firefox浏览器
-          window.open(`https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=18/${lat}/${lng}`);
-        } else {
-          // 其他浏览器（Chrome/Safari等）
-          window.open(`https://maps.google.com/maps?daddr=${lat},${lng}`);
-        }
-      } else {
-        // 桌面设备 - 打开网页版地图
-        if (confirm('将在新标签页中打开地图导航，是否继续？')) {
-          window.open(`https://maps.google.com/maps?daddr=${lat},${lng}`);
-        }
-      }
+      // 隐藏所有地图选项
+      allMapOptions.forEach(option => {
+        option.style.display = 'none';
+      });
+      
+      // 显示当前选择的地图选项
+      const currentMapOptions = document.getElementById(mapOptionsId);
+      currentMapOptions.style.display = currentMapOptions.style.display === 'block' ? 'none' : 'block';
+    }
+
+    // 使用百度地图导航
+    function navigateWithBaidu(lat, lng, name, address) {
+      // 百度地图URI方案
+      const baiduAppUrl = `baidumap://map/direction?destination=${lat},${lng}&destination_name=${encodeURIComponent(name)}&coord_type=wgs84&mode=driving`;
+      const baiduWebUrl = `https://map.baidu.com/mobile/webapp/place/detail/qt=inf&uid=0&wd=${encodeURIComponent(name)}&address=${encodeURIComponent(address)}&latlng=${lat},${lng}/`;
+      
+      // 尝试打开百度地图APP，失败则打开网页版
+      window.location.href = baiduAppUrl;
+      setTimeout(() => {
+        window.open(baiduWebUrl);
+      }, 500);
+    }
+
+    // 使用高德地图导航
+    function navigateWithGaode(lat, lng, name, address) {
+      // 高德地图URI方案
+      const gaodeAppUrl = `androidamap://viewMap?sourceApplication=营业厅查询&poiname=${encodeURIComponent(name)}&lat=${lat}&lon=${lng}&dev=0`;
+      const gaodeWebUrl = `https://uri.amap.com/marker?position=${lng},${lat}&name=${encodeURIComponent(name)}&src=webapp`;
+      
+      // 尝试打开高德地图APP，失败则打开网页版
+      window.location.href = gaodeAppUrl;
+      setTimeout(() => {
+        window.open(gaodeWebUrl);
+      }, 500);
+    }
+
+    // 使用谷歌地图导航
+    function navigateWithGoogle(lat, lng, name, address) {
+      // 谷歌地图URI方案
+      const googleAppUrl = `google.navigation:q=${lat},${lng}&mode=d`;
+      const googleWebUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+      
+      // 尝试打开谷歌地图APP，失败则打开网页版
+      window.location.href = googleAppUrl;
+      setTimeout(() => {
+        window.open(googleWebUrl);
+      }, 500);
     }
   </script>
 </body>
