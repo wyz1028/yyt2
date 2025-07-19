@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
   <title>最近营业厅查询</title>
   <style>
-    /* 样式保持不变 */
+    /* 之前的样式保持不变，新增以下样式 */
     .map-modal {
       display: none;
       position: fixed;
@@ -61,6 +61,8 @@
   </style>
 </head>
 <body>
+  <!-- 之前的HTML结构保持不变 -->
+  
   <!-- 新增地图选择模态框 -->
   <div class="map-modal" id="mapModal">
     <div class="map-modal-content">
@@ -110,16 +112,16 @@
       return true;
     }
 
-    // 使用百度地图导航（优化版）- 修正为直接启动导航
+    // 使用百度地图导航（优化版）
     function navigateWithBaidu() {
       closeMapModal();
-      const { lat, lng, name } = currentNavInfo;
+      const { lat, lng, name, address } = currentNavInfo;
       
-      // 百度地图APP URL Scheme - 直接启动导航
-      const baiduAppUrl = `baidumap://map/navi?location=${lat},${lng}&coord_type=wgs84&src=webapp&name=${encodeURIComponent(name)}`;
+      // 百度地图APP URL Scheme
+      const baiduAppUrl = `baidumap://map/direction?destination=${lat},${lng}&destination_name=${encodeURIComponent(name)}&coord_type=wgs84&mode=driving`;
       
-      // 百度地图网页版URL - 使用路线规划
-      const baiduWebUrl = `https://map.baidu.com/mobile/webapp/route/plan/?qt=nav&from=我的位置&to=${lat},${lng}&to_name=${encodeURIComponent(name)}&coord_type=wgs84`;
+      // 百度地图网页版URL
+      const baiduWebUrl = `https://map.baidu.com/mobile/webapp/place/detail/qt=inf&uid=0&wd=${encodeURIComponent(name)}&address=${encodeURIComponent(address)}&latlng=${lat},${lng}/`;
       
       // 尝试跳转APP
       window.location.href = baiduAppUrl;
@@ -133,17 +135,17 @@
       }, 500);
     }
 
-    // 使用高德地图导航（优化版）- 修正为直接启动导航
+    // 使用高德地图导航（优化版）
     function navigateWithGaode() {
       closeMapModal();
       const { lat, lng, name } = currentNavInfo;
       
-      // 高德地图APP URL Scheme - 直接启动导航
-      const gaodeAppUrl = `androidamap://navi?sourceApplication=营业厅查询&poiname=${encodeURIComponent(name)}&lat=${lat}&lon=${lng}&dev=0&style=2`;
-      const gaodeIosUrl = `iosamap://navi?sourceApplication=营业厅查询&poiname=${encodeURIComponent(name)}&lat=${lat}&lon=${lng}&dev=0&style=2`;
+      // 高德地图APP URL Scheme
+      const gaodeAppUrl = `androidamap://viewMap?sourceApplication=营业厅查询&poiname=${encodeURIComponent(name)}&lat=${lat}&lon=${lng}&dev=0`;
+      const gaodeIosUrl = `iosamap://viewMap?sourceApplication=营业厅查询&poiname=${encodeURIComponent(name)}&lat=${lat}&lon=${lng}&dev=0`;
       
-      // 高德地图网页版URL - 使用路线规划
-      const gaodeWebUrl = `https://uri.amap.com/navigation?to=${lng},${lat},${encodeURIComponent(name)}&mode=car&src=webapp`;
+      // 高德地图网页版URL
+      const gaodeWebUrl = `https://uri.amap.com/marker?position=${lng},${lat}&name=${encodeURIComponent(name)}&src=webapp`;
       
       // 根据设备类型选择URL
       const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -161,16 +163,16 @@
       }, 500);
     }
 
-    // 使用谷歌地图导航（优化版）- 修正为直接启动导航
+    // 使用谷歌地图导航（优化版）
     function navigateWithGoogle() {
       closeMapModal();
-      const { lat, lng, name } = currentNavInfo;
+      const { lat, lng } = currentNavInfo;
       
-      // 谷歌地图APP URL Scheme - 直接启动导航
-      const googleAppUrl = `google.navigation:q=${lat},${lng}&mode=d&title=${encodeURIComponent(name)}`;
+      // 谷歌地图APP URL Scheme
+      const googleAppUrl = `google.navigation:q=${lat},${lng}&mode=d`;
       
-      // 谷歌地图网页版URL - 使用路线规划
-      const googleWebUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving&dir_action=navigate`;
+      // 谷歌地图网页版URL
+      const googleWebUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
       
       // 尝试跳转APP
       window.location.href = googleAppUrl;
@@ -183,6 +185,8 @@
         }
       }, 500);
     }
+
+    // 其余代码保持不变...
   </script>
 </body>
 </html>
