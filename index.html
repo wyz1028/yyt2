@@ -5,81 +5,69 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
   <title>最近营业厅查询</title>
   <style>
-    /* 基础样式保持不变，只修改地图选择相关样式 */
-    .map-modal {
+    /* 基础样式保持不变，新增iOS专用提示样式 */
+    .ios-tip {
       display: none;
       position: fixed;
       top: 0;
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(0,0,0,0.5);
-      z-index: 1000;
+      background: rgba(0,0,0,0.7);
+      z-index: 1001;
+      color: white;
+      padding: 20px;
+      flex-direction: column;
       justify-content: center;
       align-items: center;
-    }
-    .map-modal-content {
-      background: #fff;
-      border-radius: 16px;
-      padding: 20px;
-      width: 80%;
-      max-width: 300px;
       text-align: center;
     }
-    .map-modal-title {
+    .ios-tip-content {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      color: #333;
+      max-width: 80%;
+    }
+    .ios-tip-title {
       font-size: 1.2em;
       margin-bottom: 15px;
-      color: #333;
-    }
-    .map-modal-btn {
-      display: block;
-      width: 100%;
-      padding: 12px;
-      margin: 10px 0;
-      border-radius: 20px;
-      font-size: 1em;
-      cursor: pointer;
-      border: none;
       font-weight: bold;
+      color: #2932e1;
     }
-    .map-modal-btn.baidu {
-      background: #2932e1;
-      color: white;
-    }
-    .map-modal-btn.gaode {
-      background: #0080ff;
-      color: white;
-    }
-    .map-modal-close {
+    .ios-tip-btn {
       display: inline-block;
       margin-top: 15px;
-      color: #666;
-      text-decoration: underline;
-      cursor: pointer;
-      font-size: 0.9em;
-    }
-    .map-modal-tip {
-      font-size: 0.8em;
-      color: #888;
-      margin-top: 15px;
+      padding: 8px 20px;
+      background: #2932e1;
+      color: white;
+      border-radius: 20px;
+      text-decoration: none;
     }
   </style>
 </head>
 <body>
   <!-- 之前的HTML结构保持不变 -->
   
-  <!-- 更新后的地图选择模态框（只保留百度地图和高德地图） -->
-  <div class="map-modal" id="mapModal">
-    <div class="map-modal-content">
-      <div class="map-modal-title">选择导航应用</div>
-      <button class="map-modal-btn baidu" onclick="navigateWithBaidu()">百度地图</button>
-      <button class="map-modal-btn gaode" onclick="navigateWithGaode()">高德地图</button>
-      <div class="map-modal-tip">请确保已安装相应地图应用</div>
-      <div class="map-modal-close" onclick="closeMapModal()">取消</div>
+  <!-- 新增iOS专用提示 -->
+  <div class="ios-tip" id="iosTip">
+    <div class="ios-tip-content">
+      <div class="ios-tip-title">iOS系统导航提示</div>
+      <p>由于iOS系统限制，请按以下步骤操作：</p>
+      <p>1. 点击下方按钮复制地址</p>
+      <p>2. 打开您的地图应用</p>
+      <p>3. 粘贴地址进行导航</p>
+      <a href="#" class="ios-tip-btn" id="iosCopyBtn">复制地址</a>
+      <div style="margin-top: 15px;">
+        <a href="#" onclick="closeIosTip()">取消</a>
+      </div>
     </div>
   </div>
 
   <script>
+    // 判断是否为iOS设备
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    
     // 存储当前选择的坐标和地点信息
     let currentNavInfo = {
       lat: 0,
@@ -88,82 +76,92 @@
       address: ''
     };
 
-    // 显示地图选择模态框
+    // 显示iOS提示
+    function showIosTip() {
+      document.getElementById('iosTip').style.display = 'flex';
+    }
+
+    // 关闭iOS提示
+    function closeIosTip() {
+      document.getElementById('iosTip').style.display = 'none';
+    }
+
+    // 显示地图选择模态框（iOS设备直接显示提示）
     function showMapOptions(lat, lng, name, address) {
       currentNavInfo = { lat, lng, name, address };
-      document.getElementById('mapModal').style.display = 'flex';
-    }
-
-    // 关闭地图选择模态框
-    function closeMapModal() {
-      document.getElementById('mapModal').style.display = 'none';
-    }
-
-    // 检查APP是否成功打开
-    function checkAppLaunch(callback) {
-      let timer = setTimeout(() => {
-        if (!document.hidden) {
-          callback(false); // APP未打开
-        }
-      }, 1200); // 适当延长检测时间
       
-      window.addEventListener('visibilitychange', function() {
-        if (document.hidden) {
-          clearTimeout(timer);
-          callback(true); // APP已打开
-        }
-      });
+      if (isIOS) {
+        showIosTip();
+      } else {
+        document.getElementById('mapModal').style.display = 'flex';
+      }
     }
 
-    // 使用百度地图导航（优化版）
+    // 复制地址到剪贴板（iOS专用）
+    document.getElementById('iosCopyBtn').addEventListener('click', function(e) {
+      e.preventDefault();
+      const { name, address } = currentNavInfo;
+      const text = `${name}（${address}）`;
+      
+      // 创建临时textarea元素
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      
+      try {
+        document.execCommand('copy');
+        alert('地址已复制，请打开地图应用粘贴使用');
+      } catch (err) {
+        prompt('请手动复制以下地址：', text);
+      }
+      
+      document.body.removeChild(textarea);
+      closeIosTip();
+    });
+
+    // 使用百度地图导航（优化iOS支持）
     function navigateWithBaidu() {
       closeMapModal();
       const { lat, lng, name, address } = currentNavInfo;
       
-      // 百度地图APP URL Scheme
-      const baiduAppUrl = `baidumap://map/direction?destination=${lat},${lng}&destination_name=${encodeURIComponent(name)}&coord_type=wgs84&mode=driving`;
-      
-      // 百度地图网页版URL
-      const baiduWebUrl = `https://map.baidu.com/mobile/webapp/place/detail/qt=inf&uid=0&wd=${encodeURIComponent(name)}&address=${encodeURIComponent(address)}&latlng=${lat},${lng}/`;
-      
-      // 尝试跳转APP
-      window.location.href = baiduAppUrl;
-      
-      // 检测是否成功跳转
-      checkAppLaunch((success) => {
-        if (!success) {
-          // 跳转失败，打开网页版
-          window.open(baiduWebUrl, '_blank');
-        }
-      });
+      if (isIOS) {
+        // iOS使用通用地图链接
+        window.open(`https://map.baidu.com/mobile/webapp/place/detail/qt=inf&uid=0&wd=${encodeURIComponent(name)}&address=${encodeURIComponent(address)}&latlng=${lat},${lng}/`, '_blank');
+      } else {
+        // 安卓使用标准跳转方式
+        const baiduAppUrl = `baidumap://map/direction?destination=${lat},${lng}&destination_name=${encodeURIComponent(name)}&coord_type=wgs84&mode=driving`;
+        const baiduWebUrl = `https://map.baidu.com/mobile/webapp/place/detail/qt=inf&uid=0&wd=${encodeURIComponent(name)}&address=${encodeURIComponent(address)}&latlng=${lat},${lng}/`;
+        
+        window.location.href = baiduAppUrl;
+        setTimeout(() => {
+          if (!document.hidden) {
+            window.open(baiduWebUrl, '_blank');
+          }
+        }, 1000);
+      }
     }
 
-    // 使用高德地图导航（优化版）
+    // 使用高德地图导航（优化iOS支持）
     function navigateWithGaode() {
       closeMapModal();
       const { lat, lng, name } = currentNavInfo;
       
-      // 高德地图APP URL Scheme
-      const gaodeAppUrl = `androidamap://viewMap?sourceApplication=营业厅查询&poiname=${encodeURIComponent(name)}&lat=${lat}&lon=${lng}&dev=0`;
-      const gaodeIosUrl = `iosamap://viewMap?sourceApplication=营业厅查询&poiname=${encodeURIComponent(name)}&lat=${lat}&lon=${lng}&dev=0`;
-      
-      // 高德地图网页版URL
-      const gaodeWebUrl = `https://uri.amap.com/marker?position=${lng},${lat}&name=${encodeURIComponent(name)}&src=webapp`;
-      
-      // 根据设备类型选择URL
-      const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-      const appUrl = isIOS ? gaodeIosUrl : gaodeAppUrl;
-      
-      // 尝试跳转APP
-      window.location.href = appUrl;
-      
-      // 检测是否成功跳转
-      checkAppLaunch((success) => {
-        if (!success) {
-          // 跳转失败，打开网页版
-          window.open(gaodeWebUrl, '_blank');
-        }
-      });
+      if (isIOS) {
+        // iOS使用通用地图链接
+        window.open(`https://uri.amap.com/marker?position=${lng},${lat}&name=${encodeURIComponent(name)}&src=webapp`, '_blank');
+      } else {
+        // 安卓使用标准跳转方式
+        const gaodeAppUrl = `androidamap://viewMap?sourceApplication=营业厅查询&poiname=${encodeURIComponent(name)}&lat=${lat}&lon=${lng}&dev=0`;
+        const gaodeWebUrl = `https://uri.amap.com/marker?position=${lng},${lat}&name=${encodeURIComponent(name)}&src=webapp`;
+        
+        window.location.href = gaodeAppUrl;
+        setTimeout(() => {
+          if (!document.hidden) {
+            window.open(gaodeWebUrl, '_blank');
+          }
+        }, 1000);
+      }
     }
 
     // 其余代码保持不变...
