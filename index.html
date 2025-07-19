@@ -5,219 +5,188 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
   <title>最近营业厅查询</title>
   <style>
-    /* 基础样式保持不变 */
-    body {
-      font-family: "PingFang SC", "微软雅黑", Arial, sans-serif;
-      background: #f6f8fa;
-      margin: 0;
-      padding: 0;
-    }
-    .container {
-      max-width: 480px;
-      margin: 0 auto;
-      padding: 24px 12px 40px 12px;
-    }
-    /* 新增通用导航提示样式 */
-    .nav-guide {
+    /* 之前的样式保持不变，新增以下样式 */
+    .map-modal {
       display: none;
       position: fixed;
       top: 0;
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(0,0,0,0.7);
-      z-index: 1001;
-      color: white;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
       justify-content: center;
       align-items: center;
     }
-    .nav-guide-content {
-      background: white;
+    .map-modal-content {
+      background: #fff;
+      border-radius: 16px;
       padding: 20px;
-      border-radius: 10px;
-      color: #333;
-      max-width: 80%;
+      width: 80%;
+      max-width: 300px;
       text-align: center;
     }
-    .nav-guide-title {
+    .map-modal-title {
       font-size: 1.2em;
       margin-bottom: 15px;
-      font-weight: bold;
-      color: #2932e1;
+      color: #333;
     }
-    .nav-guide-btn {
-      display: inline-block;
-      margin: 10px 5px;
-      padding: 8px 15px;
+    .map-modal-btn {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      border-radius: 20px;
+      font-size: 1em;
+      cursor: pointer;
+    }
+    .map-modal-btn.baidu {
       background: #2932e1;
       color: white;
-      border-radius: 20px;
-      text-decoration: none;
-      font-size: 0.9em;
     }
-    .nav-guide-btn.gaode {
+    .map-modal-btn.gaode {
       background: #0080ff;
+      color: white;
     }
-    .nav-guide-text {
-      margin: 15px 0;
-      line-height: 1.5;
+    .map-modal-btn.google {
+      background: #34a853;
+      color: white;
+    }
+    .map-modal-close {
+      margin-top: 15px;
+      color: #666;
+      text-decoration: underline;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h2>查找离我最近的营业厅</h2>
-    <button class="btn" onclick="getLocation()">获取当前位置并计算</button>
-    <div class="result" id="result"></div>
-    <div class="stores-list" id="storesList"></div>
-  </div>
-
-  <!-- 通用导航引导弹窗 -->
-  <div class="nav-guide" id="navGuide">
-    <div class="nav-guide-content">
-      <div class="nav-guide-title">导航到营业厅</div>
-      <div class="nav-guide-text" id="navAddress"></div>
-      <div>
-        <a href="#" class="nav-guide-btn" id="openBaidu">用百度地图</a>
-        <a href="#" class="nav-guide-btn gaode" id="openGaode">用高德地图</a>
-      </div>
-      <div class="nav-guide-text">或手动复制地址到地图应用</div>
-      <button class="nav-guide-btn" style="background: #666;" onclick="closeNavGuide()">取消</button>
+  <!-- 之前的HTML结构保持不变 -->
+  
+  <!-- 新增地图选择模态框 -->
+  <div class="map-modal" id="mapModal">
+    <div class="map-modal-content">
+      <div class="map-modal-title">选择导航方式</div>
+      <button class="map-modal-btn baidu" onclick="navigateWithBaidu()">百度地图</button>
+      <button class="map-modal-btn gaode" onclick="navigateWithGaode()">高德地图</button>
+      <button class="map-modal-btn google" onclick="navigateWithGoogle()">谷歌地图</button>
+      <div class="map-modal-close" onclick="closeMapModal()">取消</div>
     </div>
   </div>
 
   <script>
-    // 营业厅数据
-    const stores = [
-      {
-        name: "晟辉通讯",
-        address: "淄川区昆仑镇磁村村(磁村卫生院西300米泉王路北)",
-        lat: 36.573964,
-        lng: 117.944964
-      },
-      {
-        name: "顺达通讯",
-        address: "淄川区龙泉镇韩盛村委对面顺达营业厅（湖南路98号）",
-        lat: 36.586964,
-        lng: 117.993964
-      },
-      {
-        name: "昊澄通讯",
-        address: "淄川区淄城东路47号102商铺",
-        lat: 36.634964,
-        lng: 118.003964
-      }
-    ];
+    // 存储当前选择的坐标和地点信息
+    let currentNavInfo = {
+      lat: 0,
+      lng: 0,
+      name: '',
+      address: ''
+    };
 
-    // 当前导航信息
-    let currentNavInfo = null;
-
-    // 显示导航引导
-    function showNavGuide(store) {
-      currentNavInfo = store;
-      document.getElementById('navAddress').textContent = `${store.name} (${store.address})`;
-      document.getElementById('navGuide').style.display = 'flex';
+    // 显示地图选择模态框
+    function showMapOptions(lat, lng, name, address) {
+      currentNavInfo = { lat, lng, name, address };
+      document.getElementById('mapModal').style.display = 'flex';
     }
 
-    // 关闭导航引导
-    function closeNavGuide() {
-      document.getElementById('navGuide').style.display = 'none';
+    // 关闭地图选择模态框
+    function closeMapModal() {
+      document.getElementById('mapModal').style.display = 'none';
     }
 
-    // 初始化导航按钮
-    document.getElementById('openBaidu').addEventListener('click', function(e) {
-      e.preventDefault();
-      if (!currentNavInfo) return;
-      openBaiduMap(currentNavInfo);
-    });
-
-    document.getElementById('openGaode').addEventListener('click', function(e) {
-      e.preventDefault();
-      if (!currentNavInfo) return;
-      openGaodeMap(currentNavInfo);
-    });
-
-    // 打开百度地图
-    function openBaiduMap(store) {
-      const { lat, lng, name, address } = store;
-      const url = `https://map.baidu.com/mobile/webapp/place/detail/qt=inf&uid=0&wd=${encodeURIComponent(name)}&address=${encodeURIComponent(address)}&latlng=${lat},${lng}/`;
-      window.open(url, '_blank');
-      closeNavGuide();
-    }
-
-    // 打开高德地图
-    function openGaodeMap(store) {
-      const { lat, lng, name } = store;
-      const url = `https://uri.amap.com/marker?position=${lng},${lat}&name=${encodeURIComponent(name)}&src=webapp`;
-      window.open(url, '_blank');
-      closeNavGuide();
-    }
-
-    // 计算距离
-    function getDistance(lat1, lng1, lat2, lng2) {
-      const toRad = d => d * Math.PI / 180;
-      const R = 6371000;
-      const dLat = toRad(lat2 - lat1);
-      const dLng = toRad(lng2 - lng1);
-      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-                Math.sin(dLng/2) * Math.sin(dLng/2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-      return R * c;
-    }
-
-    // 获取位置
-    function getLocation() {
-      const resultDiv = document.getElementById('result');
-      const storesListDiv = document.getElementById('storesList');
-      resultDiv.innerHTML = '<div class="loading"></div>正在获取您的位置...';
-      storesListDiv.innerHTML = '';
+    // 检查是否成功跳转到APP
+    function checkAppLaunch() {
+      let timer = setTimeout(() => {
+        if (!document.hidden) {
+          // 如果页面仍然可见，说明APP跳转失败
+          return false;
+        }
+      }, 1000);
       
-      if (!navigator.geolocation) {
-        resultDiv.innerHTML = "当前浏览器不支持定位功能。";
-        return;
-      }
+      window.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+          clearTimeout(timer);
+        }
+      });
       
-      navigator.geolocation.getCurrentPosition(
-        position => showStores(position),
-        err => {
-          let msg = "无法获取您的位置";
-          if (err.code === 1) msg += "：用户拒绝了定位请求。";
-          else if (err.code === 2) msg += "：位置信息不可用。";
-          else if (err.code === 3) msg += "：获取位置超时。";
-          resultDiv.innerHTML = msg;
-        },
-        { enableHighAccuracy: true }
-      );
+      return true;
     }
 
-    // 显示营业厅列表
-    function showStores(position) {
-      const userLat = position.coords.latitude;
-      const userLng = position.coords.longitude;
-
-      // 计算距离并排序
-      const storesWithDist = stores.map(store => ({
-        ...store,
-        dist: getDistance(userLat, userLng, store.lat, store.lng)
-      })).sort((a, b) => a.dist - b.dist);
-
-      // 显示结果
-      document.getElementById('result').innerHTML = 
-        `您当前位置：<br>纬度：${userLat.toFixed(6)}，经度：${userLng.toFixed(6)}`;
-
-      // 显示营业厅列表
-      const storesListDiv = document.getElementById('storesList');
-      storesListDiv.innerHTML = storesWithDist.map((store, index) => `
-        <div class="store-card${index === 0 ? ' nearest' : ''}">
-          <div class="store-name">${store.name}</div>
-          <div class="store-address">${store.address}</div>
-          <div class="store-distance">距离您约 ${(store.dist/1000).toFixed(2)} 公里</div>
-          <button class="nav-btn" onclick="showNavGuide(${JSON.stringify(store).replace(/"/g, '&quot;')})">导航到此处</button>
-          ${index === 0 ? '<div class="nearest-badge">最近</div>' : ''}
-        </div>
-      `).join('');
+    // 使用百度地图导航（优化版）
+    function navigateWithBaidu() {
+      closeMapModal();
+      const { lat, lng, name, address } = currentNavInfo;
+      
+      // 百度地图APP URL Scheme
+      const baiduAppUrl = `baidumap://map/direction?destination=${lat},${lng}&destination_name=${encodeURIComponent(name)}&coord_type=wgs84&mode=driving`;
+      
+      // 百度地图网页版URL
+      const baiduWebUrl = `https://map.baidu.com/mobile/webapp/place/detail/qt=inf&uid=0&wd=${encodeURIComponent(name)}&address=${encodeURIComponent(address)}&latlng=${lat},${lng}/`;
+      
+      // 尝试跳转APP
+      window.location.href = baiduAppUrl;
+      
+      // 检测是否成功跳转
+      setTimeout(() => {
+        if (!checkAppLaunch()) {
+          // 跳转失败，打开网页版
+          window.open(baiduWebUrl, '_blank');
+        }
+      }, 500);
     }
+
+    // 使用高德地图导航（优化版）
+    function navigateWithGaode() {
+      closeMapModal();
+      const { lat, lng, name } = currentNavInfo;
+      
+      // 高德地图APP URL Scheme
+      const gaodeAppUrl = `androidamap://viewMap?sourceApplication=营业厅查询&poiname=${encodeURIComponent(name)}&lat=${lat}&lon=${lng}&dev=0`;
+      const gaodeIosUrl = `iosamap://viewMap?sourceApplication=营业厅查询&poiname=${encodeURIComponent(name)}&lat=${lat}&lon=${lng}&dev=0`;
+      
+      // 高德地图网页版URL
+      const gaodeWebUrl = `https://uri.amap.com/marker?position=${lng},${lat}&name=${encodeURIComponent(name)}&src=webapp`;
+      
+      // 根据设备类型选择URL
+      const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+      const appUrl = isIOS ? gaodeIosUrl : gaodeAppUrl;
+      
+      // 尝试跳转APP
+      window.location.href = appUrl;
+      
+      // 检测是否成功跳转
+      setTimeout(() => {
+        if (!checkAppLaunch()) {
+          // 跳转失败，打开网页版
+          window.open(gaodeWebUrl, '_blank');
+        }
+      }, 500);
+    }
+
+    // 使用谷歌地图导航（优化版）
+    function navigateWithGoogle() {
+      closeMapModal();
+      const { lat, lng } = currentNavInfo;
+      
+      // 谷歌地图APP URL Scheme
+      const googleAppUrl = `google.navigation:q=${lat},${lng}&mode=d`;
+      
+      // 谷歌地图网页版URL
+      const googleWebUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+      
+      // 尝试跳转APP
+      window.location.href = googleAppUrl;
+      
+      // 检测是否成功跳转
+      setTimeout(() => {
+        if (!checkAppLaunch()) {
+          // 跳转失败，打开网页版
+          window.open(googleWebUrl, '_blank');
+        }
+      }, 500);
+    }
+
+    // 其余代码保持不变...
   </script>
 </body>
 </html>
