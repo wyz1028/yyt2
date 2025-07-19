@@ -5,8 +5,20 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
   <title>最近营业厅查询</title>
   <style>
-    /* 基础样式保持不变，新增iOS专用提示样式 */
-    .ios-tip {
+    /* 基础样式保持不变 */
+    body {
+      font-family: "PingFang SC", "微软雅黑", Arial, sans-serif;
+      background: #f6f8fa;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 24px 12px 40px 12px;
+    }
+    /* 新增通用导航提示样式 */
+    .nav-guide {
       display: none;
       position: fixed;
       top: 0;
@@ -16,155 +28,196 @@
       background: rgba(0,0,0,0.7);
       z-index: 1001;
       color: white;
-      padding: 20px;
-      flex-direction: column;
       justify-content: center;
       align-items: center;
-      text-align: center;
     }
-    .ios-tip-content {
+    .nav-guide-content {
       background: white;
       padding: 20px;
       border-radius: 10px;
       color: #333;
       max-width: 80%;
+      text-align: center;
     }
-    .ios-tip-title {
+    .nav-guide-title {
       font-size: 1.2em;
       margin-bottom: 15px;
       font-weight: bold;
       color: #2932e1;
     }
-    .ios-tip-btn {
+    .nav-guide-btn {
       display: inline-block;
-      margin-top: 15px;
-      padding: 8px 20px;
+      margin: 10px 5px;
+      padding: 8px 15px;
       background: #2932e1;
       color: white;
       border-radius: 20px;
       text-decoration: none;
+      font-size: 0.9em;
+    }
+    .nav-guide-btn.gaode {
+      background: #0080ff;
+    }
+    .nav-guide-text {
+      margin: 15px 0;
+      line-height: 1.5;
     }
   </style>
 </head>
 <body>
-  <!-- 之前的HTML结构保持不变 -->
-  
-  <!-- 新增iOS专用提示 -->
-  <div class="ios-tip" id="iosTip">
-    <div class="ios-tip-content">
-      <div class="ios-tip-title">iOS系统导航提示</div>
-      <p>由于iOS系统限制，请按以下步骤操作：</p>
-      <p>1. 点击下方按钮复制地址</p>
-      <p>2. 打开您的地图应用</p>
-      <p>3. 粘贴地址进行导航</p>
-      <a href="#" class="ios-tip-btn" id="iosCopyBtn">复制地址</a>
-      <div style="margin-top: 15px;">
-        <a href="#" onclick="closeIosTip()">取消</a>
+  <div class="container">
+    <h2>查找离我最近的营业厅</h2>
+    <button class="btn" onclick="getLocation()">获取当前位置并计算</button>
+    <div class="result" id="result"></div>
+    <div class="stores-list" id="storesList"></div>
+  </div>
+
+  <!-- 通用导航引导弹窗 -->
+  <div class="nav-guide" id="navGuide">
+    <div class="nav-guide-content">
+      <div class="nav-guide-title">导航到营业厅</div>
+      <div class="nav-guide-text" id="navAddress"></div>
+      <div>
+        <a href="#" class="nav-guide-btn" id="openBaidu">用百度地图</a>
+        <a href="#" class="nav-guide-btn gaode" id="openGaode">用高德地图</a>
       </div>
+      <div class="nav-guide-text">或手动复制地址到地图应用</div>
+      <button class="nav-guide-btn" style="background: #666;" onclick="closeNavGuide()">取消</button>
     </div>
   </div>
 
   <script>
-    // 判断是否为iOS设备
-    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-    
-    // 存储当前选择的坐标和地点信息
-    let currentNavInfo = {
-      lat: 0,
-      lng: 0,
-      name: '',
-      address: ''
-    };
-
-    // 显示iOS提示
-    function showIosTip() {
-      document.getElementById('iosTip').style.display = 'flex';
-    }
-
-    // 关闭iOS提示
-    function closeIosTip() {
-      document.getElementById('iosTip').style.display = 'none';
-    }
-
-    // 显示地图选择模态框（iOS设备直接显示提示）
-    function showMapOptions(lat, lng, name, address) {
-      currentNavInfo = { lat, lng, name, address };
-      
-      if (isIOS) {
-        showIosTip();
-      } else {
-        document.getElementById('mapModal').style.display = 'flex';
+    // 营业厅数据
+    const stores = [
+      {
+        name: "晟辉通讯",
+        address: "淄川区昆仑镇磁村村(磁村卫生院西300米泉王路北)",
+        lat: 36.573964,
+        lng: 117.944964
+      },
+      {
+        name: "顺达通讯",
+        address: "淄川区龙泉镇韩盛村委对面顺达营业厅（湖南路98号）",
+        lat: 36.586964,
+        lng: 117.993964
+      },
+      {
+        name: "昊澄通讯",
+        address: "淄川区淄城东路47号102商铺",
+        lat: 36.634964,
+        lng: 118.003964
       }
+    ];
+
+    // 当前导航信息
+    let currentNavInfo = null;
+
+    // 显示导航引导
+    function showNavGuide(store) {
+      currentNavInfo = store;
+      document.getElementById('navAddress').textContent = `${store.name} (${store.address})`;
+      document.getElementById('navGuide').style.display = 'flex';
     }
 
-    // 复制地址到剪贴板（iOS专用）
-    document.getElementById('iosCopyBtn').addEventListener('click', function(e) {
+    // 关闭导航引导
+    function closeNavGuide() {
+      document.getElementById('navGuide').style.display = 'none';
+    }
+
+    // 初始化导航按钮
+    document.getElementById('openBaidu').addEventListener('click', function(e) {
       e.preventDefault();
-      const { name, address } = currentNavInfo;
-      const text = `${name}（${address}）`;
-      
-      // 创建临时textarea元素
-      const textarea = document.createElement('textarea');
-      textarea.value = text;
-      document.body.appendChild(textarea);
-      textarea.select();
-      
-      try {
-        document.execCommand('copy');
-        alert('地址已复制，请打开地图应用粘贴使用');
-      } catch (err) {
-        prompt('请手动复制以下地址：', text);
-      }
-      
-      document.body.removeChild(textarea);
-      closeIosTip();
+      if (!currentNavInfo) return;
+      openBaiduMap(currentNavInfo);
     });
 
-    // 使用百度地图导航（优化iOS支持）
-    function navigateWithBaidu() {
-      closeMapModal();
-      const { lat, lng, name, address } = currentNavInfo;
-      
-      if (isIOS) {
-        // iOS使用通用地图链接
-        window.open(`https://map.baidu.com/mobile/webapp/place/detail/qt=inf&uid=0&wd=${encodeURIComponent(name)}&address=${encodeURIComponent(address)}&latlng=${lat},${lng}/`, '_blank');
-      } else {
-        // 安卓使用标准跳转方式
-        const baiduAppUrl = `baidumap://map/direction?destination=${lat},${lng}&destination_name=${encodeURIComponent(name)}&coord_type=wgs84&mode=driving`;
-        const baiduWebUrl = `https://map.baidu.com/mobile/webapp/place/detail/qt=inf&uid=0&wd=${encodeURIComponent(name)}&address=${encodeURIComponent(address)}&latlng=${lat},${lng}/`;
-        
-        window.location.href = baiduAppUrl;
-        setTimeout(() => {
-          if (!document.hidden) {
-            window.open(baiduWebUrl, '_blank');
-          }
-        }, 1000);
-      }
+    document.getElementById('openGaode').addEventListener('click', function(e) {
+      e.preventDefault();
+      if (!currentNavInfo) return;
+      openGaodeMap(currentNavInfo);
+    });
+
+    // 打开百度地图
+    function openBaiduMap(store) {
+      const { lat, lng, name, address } = store;
+      const url = `https://map.baidu.com/mobile/webapp/place/detail/qt=inf&uid=0&wd=${encodeURIComponent(name)}&address=${encodeURIComponent(address)}&latlng=${lat},${lng}/`;
+      window.open(url, '_blank');
+      closeNavGuide();
     }
 
-    // 使用高德地图导航（优化iOS支持）
-    function navigateWithGaode() {
-      closeMapModal();
-      const { lat, lng, name } = currentNavInfo;
-      
-      if (isIOS) {
-        // iOS使用通用地图链接
-        window.open(`https://uri.amap.com/marker?position=${lng},${lat}&name=${encodeURIComponent(name)}&src=webapp`, '_blank');
-      } else {
-        // 安卓使用标准跳转方式
-        const gaodeAppUrl = `androidamap://viewMap?sourceApplication=营业厅查询&poiname=${encodeURIComponent(name)}&lat=${lat}&lon=${lng}&dev=0`;
-        const gaodeWebUrl = `https://uri.amap.com/marker?position=${lng},${lat}&name=${encodeURIComponent(name)}&src=webapp`;
-        
-        window.location.href = gaodeAppUrl;
-        setTimeout(() => {
-          if (!document.hidden) {
-            window.open(gaodeWebUrl, '_blank');
-          }
-        }, 1000);
-      }
+    // 打开高德地图
+    function openGaodeMap(store) {
+      const { lat, lng, name } = store;
+      const url = `https://uri.amap.com/marker?position=${lng},${lat}&name=${encodeURIComponent(name)}&src=webapp`;
+      window.open(url, '_blank');
+      closeNavGuide();
     }
 
-    // 其余代码保持不变...
+    // 计算距离
+    function getDistance(lat1, lng1, lat2, lng2) {
+      const toRad = d => d * Math.PI / 180;
+      const R = 6371000;
+      const dLat = toRad(lat2 - lat1);
+      const dLng = toRad(lng2 - lng1);
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                Math.sin(dLng/2) * Math.sin(dLng/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    }
+
+    // 获取位置
+    function getLocation() {
+      const resultDiv = document.getElementById('result');
+      const storesListDiv = document.getElementById('storesList');
+      resultDiv.innerHTML = '<div class="loading"></div>正在获取您的位置...';
+      storesListDiv.innerHTML = '';
+      
+      if (!navigator.geolocation) {
+        resultDiv.innerHTML = "当前浏览器不支持定位功能。";
+        return;
+      }
+      
+      navigator.geolocation.getCurrentPosition(
+        position => showStores(position),
+        err => {
+          let msg = "无法获取您的位置";
+          if (err.code === 1) msg += "：用户拒绝了定位请求。";
+          else if (err.code === 2) msg += "：位置信息不可用。";
+          else if (err.code === 3) msg += "：获取位置超时。";
+          resultDiv.innerHTML = msg;
+        },
+        { enableHighAccuracy: true }
+      );
+    }
+
+    // 显示营业厅列表
+    function showStores(position) {
+      const userLat = position.coords.latitude;
+      const userLng = position.coords.longitude;
+
+      // 计算距离并排序
+      const storesWithDist = stores.map(store => ({
+        ...store,
+        dist: getDistance(userLat, userLng, store.lat, store.lng)
+      })).sort((a, b) => a.dist - b.dist);
+
+      // 显示结果
+      document.getElementById('result').innerHTML = 
+        `您当前位置：<br>纬度：${userLat.toFixed(6)}，经度：${userLng.toFixed(6)}`;
+
+      // 显示营业厅列表
+      const storesListDiv = document.getElementById('storesList');
+      storesListDiv.innerHTML = storesWithDist.map((store, index) => `
+        <div class="store-card${index === 0 ? ' nearest' : ''}">
+          <div class="store-name">${store.name}</div>
+          <div class="store-address">${store.address}</div>
+          <div class="store-distance">距离您约 ${(store.dist/1000).toFixed(2)} 公里</div>
+          <button class="nav-btn" onclick="showNavGuide(${JSON.stringify(store).replace(/"/g, '&quot;')})">导航到此处</button>
+          ${index === 0 ? '<div class="nearest-badge">最近</div>' : ''}
+        </div>
+      `).join('');
+    }
   </script>
 </body>
 </html>
